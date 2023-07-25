@@ -1,135 +1,100 @@
-import express from "express";
-import { MongoClient } from "mongodb";
-import dotenv from "dotenv";
-import cors from "cors";
+// script.js
+const tableBody = document.getElementById("tableBody");
 
-dotenv.config();
-
-const mongodbURI = `mongodb+srv://${process.env.MONGODB_USERNAME}:${process.env.MONGODB_PASSWORD}@cluster0.zttuzw8.mongodb.net/?retryWrites=true&w=majority`;
-const client = new MongoClient(mongodbURI, { useNewUrlParser: true, useUnifiedTopology: true });
-
-const app = express();
-app.use(express.json());
-app.use(cors({ origin: "*" }));
-
-
-await client.connect();
-console.log("Connected to MongoDB");
-const database = client.db('ecomerce');
-const productsCollection = database.collection('products');
-
-
-
-app.get("/", (req, res) => {
-  res.send("hello world!");
-});
-
-app.get("/products", async (req, res) => {
-  const data = await productsCollection.find({}).toArray();
-  res.send({
-    message: "all products",
-    data: data
-  });
-});
-
-app.get("/product/:id", async (req, res) => {
-  try {
-    const data = await productsCollection.findOne({ _id: req.params.id });
-    if (!data) {
-      return res.status(404).send({
-        message: "Product not found"
+const fetchProducts = () => {
+  axios.get("https://modified-alloy-392605.oa.r.appspot.com/products")
+    .then((res) => {
+      const data = res.data.data;
+      tableBody.innerHTML = "";
+      data.forEach((item) => {
+        tableBody.innerHTML += `
+          <tr>
+            <td>${item.name}</td>
+            <td>${item.price}</td>
+            <td>${item.quantity}</td>
+            <td>${item.description}</td>
+            <td>
+              <button onclick="updateProduct('${item._id}', 'name')">Edit Name</button>
+              <button onclick="updateProduct('${item._id}', 'price')">Edit Price</button>
+              <button onclick="updateProduct('${item._id}', 'quantity')">Edit Quantity</button>
+              <button class="delete-button" data-product-id="${item._id}">Delete</button>
+            </td>
+          </tr>
+        `;
       });
-    }
-    res.status(200).send({
-      message: "Product Found",
-      data
-    });
-  } catch (err) {
-    res.status(500).send({
-      message: "Error fetching product"
-    });
-  }
-});
 
-app.post("/product", async (req, res) => {
-  try {
-    const { name, price, quantity, description } = req.body;
-    if (!name || !price || !description || !quantity) {
-      return res.status(400).send("Required parameter missing.");
-    }
-
-    await productsCollection.insertOne({
-      name,
-      price,
-      description,
-      quantity
-    });
-
-    res.status(201).send({ message: "Product created" });
-  } catch (err) {
-    res.status(500).send({
-      message: "Error creating product"
-    });
-  }
-});
-
-app.put("/product/:id", async (req, res) => {
-  try {
-    const { name, price, description, quantity } = req.body;
-    if (!name && !price && !description && !quantity) {
-      return res.status(400).send("At least one parameter is required: name, price, or description");
-    }
-
-    const data = await productsCollection.findOne({ _id: req.params.id });
-    if (!data) {
-      return res.status(404).send({
-        message: "Product not found"
+      const deleteButtons = document.querySelectorAll(".delete-button");
+      deleteButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const productIdToDelete = button.dataset.productId;
+          deleteProduct(productIdToDelete);
+        });
       });
-    }
-
-    const updatedProduct = {
-      ...data,
-      name: name || data.name,
-      price: price || data.price,
-      description: description || data.description,
-      quantity: quantity || data.quantity,
-    };
-
-    await productsCollection.updateOne({ _id: req.params.id }, { $set: updatedProduct });
-
-    res.status(200).send({
-      message: "Product updated",
-      data: updatedProduct
+    })
+    .catch((err) => {
+      console.log(err);
+      alert("Error fetching product data");
     });
-  } catch (err) {
-    res.status(500).send({
-      message: "Error updating product"
-    });
+};
+
+const updateProduct = (id, field) => {
+  const newValue = prompt(`Enter new ${field}:`);
+
+  if (!newValue) {
+    alert("Field cannot be empty!");
+    return;
   }
-});
 
-app.delete("/product/:id", async (req, res) => {
-  try {
-    console.log(req.params.id);
-    const data = await productsCollection.findOne({ _id: req.params.id });
-    if (!data) {
-      return res.status(404).send({
-        message: "Product not found"
-      });
-    }
-
-    await productsCollection.deleteOne({ _id: req.params.id });
-    res.status(200).send({
-      message: "Product deleted"
+  axios.put(`https://modified-alloy-392605.oa.r.appspot.com/product/${id}`, {
+    [field]: newValue,
+  })
+    .then((res) => {
+      console.log(res);
+      alert("Product Edited");
+      fetchProducts();
+    })
+    .catch((err) => {
+      console.log(err);
+      alert("Error editing product");
     });
-  } catch (err) {
-    res.status(500).send({
-      message: "Error deleting product"
+};
+
+const deleteProduct = (id) => {
+  axios.delete(`https://modified-alloy-392605.oa.r.appspot.com/product/${id}`)
+    .then((res) => {
+      if (res.data && res.data.message === "Product deleted") {
+        console.log(res);
+        alert("Product Deleted");
+        fetchProducts();
+      } else {
+        console.log(res);
+        alert("Product not found or already deleted");
+      }
+    })
+    .catch((err) => {
+      console.error(err);
+      alert("Error deleting product");
     });
-  }
+};
+
+const itemForm = document.getElementById("itemForm");
+itemForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  axios.post("https://modified-alloy-392605.oa.r.appspot.com/product", {
+    name: document.getElementById("itemName").value,
+    price: document.getElementById("itemPrice").value,
+    quantity: document.getElementById("itemQuantity").value,
+    description: document.getElementById("itemDescription").value,
+  })
+    .then((res) => {
+      console.log(res);
+      alert("Product Added");
+      fetchProducts();
+    })
+    .catch((err) => {
+      console.log(err);
+      alert("Error adding product");
+    });
 });
 
-const port = process.env.PORT || 3000;
-app.listen(port, () => {
-  console.log(`App listening on port ${port}`);
-});
+fetchProducts();
