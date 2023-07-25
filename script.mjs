@@ -1,3 +1,4 @@
+// script.js
 const tableBody = document.getElementById("tableBody");
 
 const fetchProducts = () => {
@@ -13,10 +14,10 @@ const fetchProducts = () => {
             <td>${item.quantity}</td>
             <td>${item.description}</td>
             <td>
-              <button onclick="updateProduct(${item.id}, 'name')">Edit Name</button>
-              <button onclick="updateProduct(${item.id}, 'price')">Edit Price</button>
-              <button onclick="updateProduct(${item.id}, 'quantity')">Edit Quantity</button>
-              <button class="delete-button" data-product-id="${item.id}">Delete</button>
+              <button onclick="updateProduct('${item._id}', 'name')">Edit Name</button>
+              <button onclick="updateProduct('${item._id}', 'price')">Edit Price</button>
+              <button onclick="updateProduct('${item._id}', 'quantity')">Edit Quantity</button>
+              <button class="delete-button" data-product-id="${item._id}">Delete</button>
             </td>
           </tr>
         `;
@@ -35,10 +36,6 @@ const fetchProducts = () => {
       alert("Error fetching product data");
     });
 };
-
-
-fetchProducts();
-
 
 const updateProduct = (id, field) => {
   const newValue = prompt(`Enter new ${field}:`);
@@ -65,7 +62,7 @@ const updateProduct = (id, field) => {
 const deleteProduct = (id) => {
   axios.delete(`https://modified-alloy-392605.oa.r.appspot.com/product/${id}`)
     .then((res) => {
-      if (res.data && res.data.message === "Product Found") {
+      if (res.data && res.data.message === "Product deleted") {
         console.log(res);
         alert("Product Deleted");
         fetchProducts();
@@ -79,7 +76,6 @@ const deleteProduct = (id) => {
       alert("Error deleting product");
     });
 };
-
 
 const itemForm = document.getElementById("itemForm");
 itemForm.addEventListener("submit", (event) => {
@@ -100,7 +96,5 @@ itemForm.addEventListener("submit", (event) => {
       alert("Error adding product");
     });
 });
-
-
 
 fetchProducts();
